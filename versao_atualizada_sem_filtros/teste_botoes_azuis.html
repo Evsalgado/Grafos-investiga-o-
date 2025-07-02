@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔵 Teste: Botões Azuis - InvestigIA Pro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%);
+            min-height: 100vh;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .success {
+            color: #059669;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
+        .warning {
+            color: #dc2626;
+            font-size: 1.2rem;
+            margin: 20px 0;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+            border: 2px solid #1d4ed8 !important;
+            border-radius: 8px !important;
+            color: white !important;
+            padding: 12px 20px !important;
+            cursor: pointer !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            margin: 10px !important;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .test-result {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .result-success {
+            background: #d1fae5;
+            color: #059669;
+            border: 2px solid #10b981;
+        }
+        
+        .result-error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 2px solid #ef4444;
+        }
+        
+        .instructions {
+            background: #eff6ff;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔵 Teste de Botões Azuis</h1>
+        <p>Este teste verifica se os botões estão aparecendo em azul como esperado.</p>
+        
+        <div class="instructions">
+            <h3>📋 Como testar:</h3>
+            <ol style="text-align: left;">
+                <li>Os botões abaixo devem aparecer em <strong>azul</strong></li>
+                <li>Ao passar o mouse, devem ficar mais escuros</li>
+                <li>Devem ter sombra e bordas destacadas</li>
+                <li>Se aparecerem transparentes ou cinzas = <strong>ERRO</strong></li>
+            </ol>
+        </div>
+        
+        <h3>🧪 Botões de Teste:</h3>
+        
+        <button class="test-button" id="testBtn1">
+            <i class="fas fa-minus"></i> Botão Teste 1
+        </button>
+        
+        <button class="test-button" id="testBtn2">
+            <i class="fas fa-plus"></i> Botão Teste 2
+        </button>
+        
+        <button class="test-button" id="testBtn3">
+            <i class="fas fa-cog"></i> Botão Teste 3
+        </button>
+        
+        <div id="testResult" class="test-result" style="display: none;"></div>
+        
+        <button onclick="runTest()" style="background: #10b981; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; margin-top: 20px; cursor: pointer;">
+            🔍 Executar Teste Automático
+        </button>
+        
+        <div class="instructions" style="margin-top: 30px;">
+            <h3>✅ Se os botões estão azuis:</h3>
+            <p>O problema foi <strong>RESOLVIDO</strong>! A aplicação principal também deve funcionar.</p>
+            
+            <h3>❌ Se os botões NÃO estão azuis:</h3>
+            <p>Tente:</p>
+            <ul style="text-align: left;">
+                <li>Apertar <strong>Ctrl + F5</strong> (força atualização)</li>
+                <li>Abrir em <strong>aba anônima</strong> do navegador</li>
+                <li>Aguardar alguns minutos (GitHub Pages demora para atualizar)</li>
+                <li>Testar em outro navegador</li>
+            </ul>
+        </div>
+        
+        <p style="margin-top: 30px; opacity: 0.7;">
+            <strong>Links úteis:</strong><br>
+            <a href="./index.html" style="color: #3b82f6;">🏠 Página Inicial</a> | 
+            <a href="./app_principal.html" style="color: #3b82f6;">🚀 Aplicação Principal</a> | 
+            <a href="./teste_bibliotecas.html" style="color: #3b82f6;">🔍 Teste de Bibliotecas</a>
+        </p>
+    </div>
+
+    <script>
+        function runTest() {
+            const testButtons = document.querySelectorAll('.test-button');
+            const resultDiv = document.getElementById('testResult');
+            let allBlue = true;
+            let testResults = [];
+            
+            testButtons.forEach((button, index) => {
+                const computedStyle = window.getComputedStyle(button);
+                const background = computedStyle.background || computedStyle.backgroundColor;
+                const borderColor = computedStyle.borderColor;
+                
+                // Verifica se contém azul no background
+                const hasBlueBackground = background.includes('rgb(59, 130, 246)') || 
+                                        background.includes('#3b82f6') || 
+                                        background.includes('linear-gradient') ||
+                                        background.includes('59, 130, 246');
+                
+                // Verifica se a borda é azul
+                const hasBlueBorder = borderColor.includes('rgb(29, 78, 216)') || 
+                                    borderColor.includes('#1d4ed8') ||
+                                    borderColor.includes('29, 78, 216');
+                
+                const isBlue = hasBlueBackground && hasBlueBorder;
+                
+                if (!isBlue) {
+                    allBlue = false;
+                }
+                
+                testResults.push({
+                    button: index + 1,
+                    background: background,
+                    borderColor: borderColor,
+                    isBlue: isBlue
+                });
+            });
+            
+            resultDiv.style.display = 'block';
+            
+            if (allBlue) {
+                resultDiv.className = 'test-result result-success';
+                resultDiv.innerHTML = `
+                    <h3>✅ TESTE PASSOU!</h3>
+                    <p>Todos os botões estão azuis como esperado.</p>
+                    <p><strong>✅ A aplicação principal deve funcionar corretamente!</strong></p>
+                `;
+            } else {
+                resultDiv.className = 'test-result result-error';
+                resultDiv.innerHTML = `
+                    <h3>❌ TESTE FALHOU!</h3>
+                    <p>Alguns botões não estão azuis.</p>
+                    <p><strong>Soluções:</strong></p>
+                    <ul style="text-align: left;">
+                        <li>Pressione <strong>Ctrl + F5</strong> para forçar atualização</li>
+                        <li>Tente em <strong>aba anônima</strong></li>
+                        <li>Aguarde alguns minutos (cache do GitHub Pages)</li>
+                    </ul>
+                `;
+            }
+            
+            // Log detalhado para debug
+            console.log('🔵 Teste de Botões Azuis - Resultados:', testResults);
+        }
+        
+        // Força botões azuis (igual ao app principal)
+        function forceBlueButtons() {
+            const buttons = document.querySelectorAll('.test-button');
+            buttons.forEach(button => {
+                button.style.setProperty('background', 'linear-gradient(135deg, #3b82f6, #2563eb)', 'important');
+                button.style.setProperty('border', '2px solid #1d4ed8', 'important');
+                button.style.setProperty('color', 'white', 'important');
+            });
+        }
+        
+        // Executa ao carregar
+        document.addEventListener('DOMContentLoaded', forceBlueButtons);
+        window.addEventListener('load', forceBlueButtons);
+        
+        // Executa automaticamente o teste após 2 segundos
+        setTimeout(runTest, 2000);
+    </script>
+</body>
+</html> 
