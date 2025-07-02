@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Bibliotecas - InvestigIA Pro</title>
+    
+    <!-- Mesmas bibliotecas da aplicação principal -->
+    <script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- jsPDF with fallback -->
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script>
+        // Fallback para jsPDF
+        if (typeof window.jsPDF === 'undefined' && typeof jsPDF === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>');
+        }
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .status-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #ddd;
+        }
+        .status-ok {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        .status-error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+        .badge-ok {
+            background: #28a745;
+            color: white;
+        }
+        .badge-error {
+            background: #dc3545;
+            color: white;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-container">
+        <h1>🔍 Teste de Bibliotecas - InvestigIA Pro</h1>
+        <p>Verificando se todas as bibliotecas estão carregando corretamente...</p>
+        
+        <div id="library-status"></div>
+        
+        <div style="margin-top: 20px;">
+            <button class="test-button" onclick="testCytoscape()">Testar Cytoscape</button>
+            <button class="test-button" onclick="testXLSX()">Testar XLSX</button>
+            <button class="test-button" onclick="testJsPDF()">Testar jsPDF</button>
+            <button class="test-button" onclick="testHTML2Canvas()">Testar html2canvas</button>
+        </div>
+        
+        <div id="test-results" class="test-results" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Verificar bibliotecas ao carregar a página
+        window.addEventListener('load', function() {
+            checkLibraries();
+        });
+
+        function checkLibraries() {
+            const libraries = [
+                {
+                    name: 'Cytoscape',
+                    check: () => typeof cytoscape !== 'undefined',
+                    version: () => cytoscape.version || 'Desconhecida'
+                },
+                {
+                    name: 'XLSX',
+                    check: () => typeof XLSX !== 'undefined',
+                    version: () => XLSX.version || 'Desconhecida'
+                },
+                {
+                    name: 'jsPDF',
+                    check: () => typeof window.jsPDF !== 'undefined' || typeof jsPDF !== 'undefined' || typeof window.jspdf !== 'undefined',
+                    version: () => {
+                        if (typeof window.jsPDF !== 'undefined') return window.jsPDF.version || '2.5.1';
+                        if (typeof jsPDF !== 'undefined') return jsPDF.version || '2.5.1';
+                        return 'Desconhecida';
+                    }
+                },
+                {
+                    name: 'html2canvas',
+                    check: () => typeof html2canvas !== 'undefined',
+                    version: () => html2canvas.version || 'Desconhecida'
+                }
+            ];
+
+            const statusDiv = document.getElementById('library-status');
+            statusDiv.innerHTML = '';
+
+            libraries.forEach(lib => {
+                const isLoaded = lib.check();
+                const statusItem = document.createElement('div');
+                statusItem.className = `status-item ${isLoaded ? 'status-ok' : 'status-error'}`;
+                
+                statusItem.innerHTML = `
+                    <div>
+                        <strong>${lib.name}</strong>
+                        ${isLoaded ? `<small style="color: #666;"> (v${lib.version()})</small>` : ''}
+                    </div>
+                    <span class="status-badge ${isLoaded ? 'badge-ok' : 'badge-error'}">
+                        ${isLoaded ? '✅ OK' : '❌ ERRO'}
+                    </span>
+                `;
+                
+                statusDiv.appendChild(statusItem);
+            });
+        }
+
+        function showResults(title, content) {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`;
+        }
+
+        function testCytoscape() {
+            try {
+                const cy = cytoscape({
+                    elements: [
+                        { data: { id: 'a' } },
+                        { data: { id: 'b' } },
+                        { data: { id: 'ab', source: 'a', target: 'b' } }
+                    ]
+                });
+                showResults('✅ Teste Cytoscape', `Sucesso! Grafo criado com ${cy.nodes().length} nós e ${cy.edges().length} arestas.`);
+            } catch (error) {
+                showResults('❌ Teste Cytoscape', `Erro: ${error.message}`);
+            }
+        }
+
+        function testXLSX() {
+            try {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet([['Nome', 'Idade'], ['João', 30]]);
+                XLSX.utils.book_append_sheet(wb, ws, 'Teste');
+                showResults('✅ Teste XLSX', 'Sucesso! Planilha criada e processada.');
+            } catch (error) {
+                showResults('❌ Teste XLSX', `Erro: ${error.message}`);
+            }
+        }
+
+        function testJsPDF() {
+            try {
+                const jsPDFLib = window.jsPDF || jsPDF || window.jspdf;
+                if (!jsPDFLib) {
+                    throw new Error('Biblioteca jsPDF não encontrada');
+                }
+                const doc = new jsPDFLib.jsPDF();
+                doc.text('Teste InvestigIA Pro', 10, 10);
+                showResults('✅ Teste jsPDF', 'Sucesso! PDF criado com texto de teste.');
+            } catch (error) {
+                showResults('❌ Teste jsPDF', `Erro: ${error.message}`);
+            }
+        }
+
+        function testHTML2Canvas() {
+            try {
+                const testDiv = document.createElement('div');
+                testDiv.innerHTML = 'Teste';
+                testDiv.style.padding = '10px';
+                testDiv.style.background = '#f0f0f0';
+                document.body.appendChild(testDiv);
+                
+                html2canvas(testDiv).then(canvas => {
+                    document.body.removeChild(testDiv);
+                    showResults('✅ Teste html2canvas', `Sucesso! Canvas criado com dimensões ${canvas.width}x${canvas.height}.`);
+                }).catch(error => {
+                    document.body.removeChild(testDiv);
+                    showResults('❌ Teste html2canvas', `Erro: ${error.message}`);
+                });
+            } catch (error) {
+                showResults('❌ Teste html2canvas', `Erro: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html> 
