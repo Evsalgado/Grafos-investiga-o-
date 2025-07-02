@@ -405,32 +405,42 @@
         }
 
         .btn-minimize {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            border: 2px solid #1d4ed8;
-            border-radius: 8px;
-            color: white;
-            padding: 10px 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+            border: 2px solid #1d4ed8 !important;
+            border-radius: 8px !important;
+            color: white !important;
+            padding: 10px 15px !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
         }
 
         .btn-minimize:hover {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            border-color: #1e40af;
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+            border-color: #1e40af !important;
+            transform: translateY(-2px) scale(1.05) !important;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4) !important;
         }
 
         .btn-minimize:active {
-            transform: translateY(0) scale(1.02);
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+            transform: translateY(0) scale(1.02) !important;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
+        }
+
+        /* Força os botões a serem azuis - Prioridade máxima */
+        button.btn-minimize,
+        #customizationToggle,
+        #controlsToggle, 
+        #transactionsToggle {
+            background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+            border: 2px solid #1d4ed8 !important;
+            color: white !important;
         }
 
         .section-collapsed {
@@ -637,9 +647,12 @@
             }
             
             .btn-minimize {
-                padding: 8px 12px;
-                font-size: 0.9rem;
-                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+                padding: 8px 12px !important;
+                font-size: 0.9rem !important;
+                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25) !important;
+                background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+                border: 2px solid #1d4ed8 !important;
+                color: white !important;
             }
         }
 
@@ -3612,6 +3625,39 @@
             cy.layout(layoutOptions).run();
             showToast(`✅ Layout "${tipoLayout}" aplicado!`, 'success');
         }
+
+        // FORÇA BOTÕES AZUIS - Anti-cache garantido
+        function forceBlueButtons() {
+            const buttons = document.querySelectorAll('.btn-minimize, #customizationToggle, #controlsToggle, #transactionsToggle');
+            buttons.forEach(button => {
+                // Força estilo inline para ignorar qualquer cache
+                button.style.setProperty('background', 'linear-gradient(135deg, #3b82f6, #2563eb)', 'important');
+                button.style.setProperty('border', '2px solid #1d4ed8', 'important');
+                button.style.setProperty('color', 'white', 'important');
+                button.style.setProperty('padding', '10px 15px', 'important');
+                button.style.setProperty('border-radius', '8px', 'important');
+                button.style.setProperty('font-weight', '600', 'important');
+                button.style.setProperty('box-shadow', '0 4px 12px rgba(59, 130, 246, 0.3)', 'important');
+                button.style.setProperty('text-shadow', '0 1px 2px rgba(0, 0, 0, 0.3)', 'important');
+            });
+            console.log('🔵 Botões azuis forçados via JavaScript!');
+        }
+
+        // Executa quando a página carrega
+        document.addEventListener('DOMContentLoaded', forceBlueButtons);
+        
+        // Executa novamente após carregamento completo
+        window.addEventListener('load', forceBlueButtons);
+        
+        // Executa a cada 1 segundo durante os primeiros 10 segundos (anti-cache extremo)
+        let antiCacheCounter = 0;
+        const antiCacheInterval = setInterval(() => {
+            forceBlueButtons();
+            antiCacheCounter++;
+            if (antiCacheCounter >= 10) {
+                clearInterval(antiCacheInterval);
+            }
+        }, 1000);
     </script>
 </body>
 </html> 
