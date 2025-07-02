@@ -20,7 +20,16 @@
     <!-- JavaScript Libraries -->
     <script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- jsPDF with fallback -->
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script>
+        // Fallback para jsPDF
+        if (typeof window.jsPDF === 'undefined' && typeof jsPDF === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>');
+        }
+    </script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
@@ -136,7 +145,7 @@
             const requiredLibs = {
                 'Cytoscape': typeof cytoscape !== 'undefined',
                 'XLSX': typeof XLSX !== 'undefined',
-                'jsPDF': typeof window.jsPDF !== 'undefined' || typeof jsPDF !== 'undefined',
+                'jsPDF': typeof window.jsPDF !== 'undefined' || typeof jsPDF !== 'undefined' || typeof window.jspdf !== 'undefined',
                 'html2canvas': typeof html2canvas !== 'undefined'
             };
             
@@ -144,6 +153,8 @@
             
             if (missingLibs.length === 0) {
                 // Todas as bibliotecas carregaram - redirecionar para app principal
+                document.querySelector('.loading-text').textContent = 'Carregamento concluído!';
+                document.querySelector('.loading-subtitle').textContent = 'Redirecionando para aplicação...';
                 setTimeout(() => {
                     window.location.href = './app_principal.html';
                 }, 1000);
