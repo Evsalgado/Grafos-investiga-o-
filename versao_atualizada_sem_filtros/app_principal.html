@@ -405,22 +405,32 @@
         }
 
         .btn-minimize {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 6px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: 2px solid #1d4ed8;
+            border-radius: 8px;
             color: white;
-            padding: 8px 12px;
+            padding: 10px 15px;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 0.9rem;
+            font-size: 1rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
         .btn-minimize:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border-color: #1e40af;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-minimize:active {
+            transform: translateY(0) scale(1.02);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
         }
 
         .section-collapsed {
@@ -627,8 +637,9 @@
             }
             
             .btn-minimize {
-                padding: 6px 10px;
-                font-size: 0.8rem;
+                padding: 8px 12px;
+                font-size: 0.9rem;
+                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
             }
         }
 
