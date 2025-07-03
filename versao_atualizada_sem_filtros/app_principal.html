@@ -3190,6 +3190,14 @@
                 // Exibir informações detalhadas
                 showDetailedNodeInfo(data);
             });
+
+            // Evento de clique direito nos nós para menu de contexto
+            cy.on('cxttap', 'node', function(evt) {
+                evt.stopPropagation();
+                const node = evt.target;
+                const data = node.data();
+                showNodeContextMenu(evt, node, data);
+            });
             
             cy.on('tap', 'edge', function(evt) {
                 const edge = evt.target;
@@ -3624,6 +3632,476 @@
 
             cy.layout(layoutOptions).run();
             showToast(`✅ Layout "${tipoLayout}" aplicado!`, 'success');
+        }
+
+        // === SISTEMA DE EXCLUSÃO DE ENTIDADES ===
+        
+        // Variáveis globais para controle de exclusão
+        let graphBackupStack = [];
+        let excludedEntitiesLog = [];
+        const MAX_BACKUPS = 10;
+
+        // Função para criar backup do estado atual do grafo
+        function createGraphBackup(action = 'backup') {
+            if (!cy) return null;
+            
+            const backup = {
+                timestamp: new Date().toISOString(),
+                action: action,
+                elements: cy.elements().jsons(),
+                totalNodes: cy.nodes().length,
+                totalEdges: cy.edges().length
+            };
+            
+            graphBackupStack.push(backup);
+            
+            // Manter apenas os últimos MAX_BACKUPS
+            if (graphBackupStack.length > MAX_BACKUPS) {
+                graphBackupStack.shift();
+            }
+            
+            console.log(`💾 Backup criado: ${backup.totalNodes} nós, ${backup.totalEdges} arestas`);
+            return backup;
+        }
+
+        // Função para mostrar menu de contexto do nó
+        function showNodeContextMenu(evt, node, data) {
+            // Remover menu existente se houver
+            removeNodeContextMenu();
+            
+            // Criar menu de contexto
+            const menu = document.createElement('div');
+            menu.id = 'nodeContextMenu';
+            menu.style.cssText = `
+                position: fixed;
+                background: linear-gradient(135deg, #1e293b, #334155);
+                border: 2px solid #64748b;
+                border-radius: 12px;
+                padding: 15px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+                z-index: 10000;
+                color: white;
+                min-width: 280px;
+                backdrop-filter: blur(10px);
+                animation: menuSlideIn 0.2s ease-out;
+            `;
+            
+            // Posicionar menu próximo ao cursor
+            const rect = evt.originalEvent || evt;
+            menu.style.left = `${(rect.clientX || rect.pageX) + 10}px`;
+            menu.style.top = `${(rect.clientY || rect.pageY) - 10}px`;
+            
+            // Conteúdo do menu
+            menu.innerHTML = `
+                <div style="border-bottom: 1px solid #475569; padding-bottom: 10px; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: #60a5fa; font-size: 1rem;">
+                        <i class="fas fa-user-circle"></i> ${data.label}
+                    </h4>
+                    <small style="color: #94a3b8;">${data.nodeType} • ${data.connections} conexões</small>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <button onclick="highlightNodeConnections('${data.id}')" class="context-menu-btn" style="background: #3b82f6;">
+                        <i class="fas fa-eye"></i> Destacar Conexões
+                    </button>
+                    <button onclick="filterByEntity('${data.label}')" class="context-menu-btn" style="background: #059669;">
+                        <i class="fas fa-filter"></i> Filtrar Entidade
+                    </button>
+                </div>
+                
+                <div style="border-top: 1px solid #475569; padding-top: 10px;">
+                    <button onclick="confirmDeleteEntity('${data.id}', '${data.label}')" class="context-menu-btn delete-btn" style="background: #dc2626; border: 1px solid #ef4444;">
+                        <i class="fas fa-trash-alt"></i> Excluir Entidade
+                    </button>
+                    <small style="display: block; color: #94a3b8; margin-top: 5px; font-size: 0.8rem;">
+                        ⚠️ Remove a entidade e todas suas conexões
+                    </small>
+                </div>
+                
+                <div style="margin-top: 10px; text-align: center;">
+                    <button onclick="removeNodeContextMenu()" class="context-menu-btn" style="background: #6b7280; font-size: 0.8rem; padding: 5px 10px;">
+                        Fechar
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(menu);
+            
+            // Adicionar CSS para botões do menu se não existir
+            if (!document.getElementById('contextMenuStyles')) {
+                const styles = document.createElement('style');
+                styles.id = 'contextMenuStyles';
+                styles.textContent = `
+                    @keyframes menuSlideIn {
+                        from { opacity: 0; transform: scale(0.9) translateY(-10px); }
+                        to { opacity: 1; transform: scale(1) translateY(0); }
+                    }
+                    
+                    .context-menu-btn {
+                        display: block;
+                        width: 100%;
+                        padding: 8px 12px;
+                        margin: 5px 0;
+                        border: none;
+                        border-radius: 6px;
+                        color: white;
+                        font-size: 0.9rem;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        text-align: left;
+                    }
+                    
+                    .context-menu-btn:hover {
+                        transform: translateX(3px);
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    }
+                    
+                    .delete-btn:hover {
+                        background: #ef4444 !important;
+                        box-shadow: 0 0 15px rgba(239, 68, 68, 0.4) !important;
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+            
+            // Fechar menu ao clicar fora
+            setTimeout(() => {
+                document.addEventListener('click', removeNodeContextMenu, { once: true });
+            }, 100);
+        }
+
+        // Função para remover menu de contexto
+        function removeNodeContextMenu() {
+            const menu = document.getElementById('nodeContextMenu');
+            if (menu) {
+                menu.style.animation = 'menuSlideIn 0.2s ease-out reverse';
+                setTimeout(() => menu.remove(), 200);
+            }
+        }
+
+        // Função para destacar conexões de um nó
+        function highlightNodeConnections(nodeId) {
+            if (!cy) return;
+            
+            removeNodeContextMenu();
+            
+            // Reset de todos os estilos
+            cy.elements().removeClass('highlighted dimmed');
+            
+            const targetNode = cy.getElementById(nodeId);
+            if (!targetNode.length) return;
+            
+            // Destacar o nó principal
+            targetNode.addClass('highlighted');
+            
+            // Obter conexões
+            const connectedEdges = targetNode.connectedEdges();
+            const connectedNodes = connectedEdges.connectedNodes().difference(targetNode);
+            
+            // Destacar conexões e nós conectados
+            connectedEdges.addClass('highlighted');
+            connectedNodes.addClass('highlighted');
+            
+            // Diminuir opacidade dos outros elementos
+            cy.elements().difference(connectedEdges.union(connectedNodes).union(targetNode)).addClass('dimmed');
+            
+            showToast(`🔍 Destacando ${connectedNodes.length} conexões de "${targetNode.data('label')}"`, 'info', 3000);
+            
+            // Auto-remover destaque após 10 segundos
+            setTimeout(() => {
+                if (cy) {
+                    cy.elements().removeClass('highlighted dimmed');
+                    showToast('👁️ Destaque removido automaticamente', 'info', 2000);
+                }
+            }, 10000);
+        }
+
+        // Função para confirmar exclusão de entidade
+        function confirmDeleteEntity(nodeId, nodeLabel) {
+            if (!cy) return;
+            
+            removeNodeContextMenu();
+            
+            const targetNode = cy.getElementById(nodeId);
+            if (!targetNode.length) {
+                showToast('❌ Entidade não encontrada!', 'error');
+                return;
+            }
+            
+            // Obter conexões que serão afetadas
+            const connectedEdges = targetNode.connectedEdges();
+            const connectedNodes = connectedEdges.connectedNodes().difference(targetNode);
+            
+            // Criar modal de confirmação
+            const modal = document.createElement('div');
+            modal.id = 'deleteConfirmModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 20000;
+                animation: modalFadeIn 0.3s ease-out;
+            `;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #1e293b, #334155);
+                    border: 2px solid #ef4444;
+                    border-radius: 16px;
+                    padding: 30px;
+                    max-width: 500px;
+                    width: 90%;
+                    color: white;
+                    text-align: center;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+                    animation: modalSlideIn 0.3s ease-out;
+                ">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">⚠️</div>
+                    <h3 style="color: #ef4444; margin-bottom: 15px;">Confirmar Exclusão</h3>
+                    <p style="margin-bottom: 20px; line-height: 1.5;">
+                        Você está prestes a <strong>EXCLUIR</strong> a entidade:<br>
+                        <span style="color: #60a5fa; font-size: 1.2rem; font-weight: bold;">"${nodeLabel}"</span>
+                    </p>
+                    
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: left;">
+                        <h4 style="color: #ef4444; margin: 0 0 10px 0;">📋 Impacto da Exclusão:</h4>
+                        <ul style="margin: 0; padding-left: 20px; color: #fecaca;">
+                            <li><strong>${connectedEdges.length}</strong> conexões serão removidas</li>
+                            <li><strong>${connectedNodes.length}</strong> entidades relacionadas serão afetadas</li>
+                            <li>Esta ação pode ser <strong>desfeita</strong> usando Ctrl+Z</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; justify-content: center; margin-top: 25px;">
+                        <button onclick="cancelDeleteEntity()" style="
+                            background: #6b7280;
+                            color: white;
+                            border: none;
+                            padding: 12px 25px;
+                            border-radius: 8px;
+                            font-size: 1rem;
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                        ">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button onclick="executeDeleteEntity('${nodeId}', '${nodeLabel}')" style="
+                            background: #dc2626;
+                            color: white;
+                            border: 2px solid #ef4444;
+                            padding: 12px 25px;
+                            border-radius: 8px;
+                            font-size: 1rem;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                        ">
+                            <i class="fas fa-trash-alt"></i> EXCLUIR
+                        </button>
+                    </div>
+                    
+                    <p style="margin-top: 20px; font-size: 0.8rem; color: #94a3b8;">
+                        💡 Dica: Use <kbd>Ctrl+Z</kbd> para desfazer após a exclusão
+                    </p>
+                </div>
+            `;
+            
+            // Destacar temporariamente o que será excluído
+            cy.elements().removeClass('highlighted dimmed');
+            targetNode.addClass('highlighted');
+            connectedEdges.addClass('highlighted');
+            connectedNodes.addClass('dimmed');
+            
+            document.body.appendChild(modal);
+            
+            // Adicionar estilos se necessário
+            if (!document.getElementById('modalStyles')) {
+                const styles = document.createElement('style');
+                styles.id = 'modalStyles';
+                styles.textContent = `
+                    @keyframes modalFadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    
+                    @keyframes modalSlideIn {
+                        from { transform: scale(0.8) translateY(-20px); opacity: 0; }
+                        to { transform: scale(1) translateY(0); opacity: 1; }
+                    }
+                    
+                    #deleteConfirmModal button:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    }
+                    
+                    .dimmed {
+                        opacity: 0.3 !important;
+                    }
+                    
+                    .highlighted {
+                        border-width: 6px !important;
+                        border-color: #ef4444 !important;
+                        box-shadow: 0 0 20px #ef4444 !important;
+                    }
+                    
+                    edge.highlighted {
+                        line-color: #ef4444 !important;
+                        target-arrow-color: #ef4444 !important;
+                        width: 6 !important;
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+        }
+
+        // Função para cancelar exclusão
+        function cancelDeleteEntity() {
+            const modal = document.getElementById('deleteConfirmModal');
+            if (modal) {
+                modal.style.animation = 'modalFadeIn 0.3s ease-out reverse';
+                setTimeout(() => modal.remove(), 300);
+            }
+            
+            // Remover destaque
+            if (cy) {
+                cy.elements().removeClass('highlighted dimmed');
+            }
+            
+            showToast('❌ Exclusão cancelada', 'info', 2000);
+        }
+
+        // Função para executar exclusão da entidade
+        function executeDeleteEntity(nodeId, nodeLabel) {
+            if (!cy) return;
+            
+            // Fechar modal
+            cancelDeleteEntity();
+            
+            const targetNode = cy.getElementById(nodeId);
+            if (!targetNode.length) {
+                showToast('❌ Entidade não encontrada!', 'error');
+                return;
+            }
+            
+            // Criar backup antes da exclusão
+            const backup = createGraphBackup(`Exclusão de "${nodeLabel}"`);
+            
+            // Obter estatísticas antes da exclusão
+            const connectedEdges = targetNode.connectedEdges();
+            const connectedNodes = connectedEdges.connectedNodes().difference(targetNode);
+            const beforeStats = {
+                totalNodes: cy.nodes().length,
+                totalEdges: cy.edges().length,
+                deletedConnections: connectedEdges.length,
+                affectedNodes: connectedNodes.length
+            };
+            
+            // Executar exclusão
+            const removedElements = targetNode.union(connectedEdges);
+            cy.remove(removedElements);
+            
+            // Registrar log da exclusão
+            const exclusionLog = {
+                timestamp: new Date().toISOString(),
+                entityId: nodeId,
+                entityLabel: nodeLabel,
+                removedElements: removedElements.jsons(),
+                beforeStats: beforeStats,
+                afterStats: {
+                    totalNodes: cy.nodes().length,
+                    totalEdges: cy.edges().length
+                },
+                backupId: backup ? backup.timestamp : null
+            };
+            
+            excludedEntitiesLog.push(exclusionLog);
+            
+            // Remover destaques
+            cy.elements().removeClass('highlighted dimmed');
+            
+            // Aplicar layout suave após exclusão
+            cy.layout({
+                name: 'cose',
+                animate: true,
+                animationDuration: 1000,
+                fit: true,
+                padding: 30,
+                nodeRepulsion: 4000,
+                idealEdgeLength: 80
+            }).run();
+            
+            // Mostrar resultado
+            showToast(`
+                <strong>🗑️ Entidade Excluída com Sucesso</strong><br>
+                Entidade: "${nodeLabel}"<br>
+                🔗 ${beforeStats.deletedConnections} conexões removidas<br>
+                👥 ${beforeStats.affectedNodes} entidades afetadas<br>
+                📊 Grafo: ${beforeStats.totalNodes} → ${cy.nodes().length} nós<br>
+                <small>💡 Use Ctrl+Z para desfazer</small>
+            `, 'success', 6000);
+            
+            console.log('🗑️ Entidade excluída:', exclusionLog);
+        }
+
+        // Função para desfazer última exclusão (Ctrl+Z)
+        function undoLastAction() {
+            if (!cy || graphBackupStack.length === 0) {
+                showToast('❌ Nenhuma ação para desfazer', 'warning', 3000);
+                return;
+            }
+            
+            const lastBackup = graphBackupStack.pop();
+            
+            if (!lastBackup) {
+                showToast('❌ Backup não encontrado', 'error', 3000);
+                return;
+            }
+            
+            // Restaurar estado anterior
+            cy.elements().remove();
+            cy.add(lastBackup.elements);
+            
+            // Aplicar layout suave
+            cy.layout({
+                name: 'cose',
+                animate: true,
+                animationDuration: 1000,
+                fit: true,
+                padding: 20
+            }).run();
+            
+            showToast(`
+                <strong>↶ Ação Desfeita</strong><br>
+                ${lastBackup.action}<br>
+                📊 Restaurado: ${lastBackup.totalNodes} nós, ${lastBackup.totalEdges} arestas<br>
+                🕐 ${new Date(lastBackup.timestamp).toLocaleTimeString()}
+            `, 'info', 5000);
+            
+            console.log('↶ Ação desfeita:', lastBackup.action);
+        }
+
+        // Adicionar listener para Ctrl+Z global
+        document.addEventListener('keydown', function(event) {
+            if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
+                event.preventDefault();
+                undoLastAction();
+            }
+        });
+
+        // Função para obter log de exclusões
+        function getExclusionLog() {
+            return {
+                total: excludedEntitiesLog.length,
+                backups: graphBackupStack.length,
+                log: excludedEntitiesLog,
+                lastBackup: graphBackupStack[graphBackupStack.length - 1]
+            };
         }
 
         // FORÇA BOTÕES AZUIS - Anti-cache garantido
