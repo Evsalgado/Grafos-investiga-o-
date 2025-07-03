@@ -3714,6 +3714,9 @@
                     <button onclick="filterByEntity('${data.label}')" class="context-menu-btn" style="background: #059669;">
                         <i class="fas fa-filter"></i> Filtrar Entidade
                     </button>
+                    <button onclick="consolidateExclusiveNodes('${data.id}', '${data.label}')" class="context-menu-btn" style="background: #f59e0b;">
+                        <i class="fas fa-compress-arrows-alt"></i> Consolidar Nós Exclusivos
+                    </button>
                 </div>
                 
                 <div style="border-top: 1px solid #475569; padding-top: 10px;">
@@ -3961,6 +3964,20 @@
                         line-color: #ef4444 !important;
                         target-arrow-color: #ef4444 !important;
                         width: 6 !important;
+                    }
+                    
+                    .consolidation-target {
+                        border-width: 4px !important;
+                        border-color: #f59e0b !important;
+                        box-shadow: 0 0 15px #f59e0b !important;
+                        opacity: 0.7 !important;
+                    }
+                    
+                    edge.consolidation-target {
+                        line-color: #f59e0b !important;
+                        target-arrow-color: #f59e0b !important;
+                        width: 4 !important;
+                        opacity: 0.7 !important;
                     }
                 `;
                 document.head.appendChild(styles);
@@ -4282,6 +4299,363 @@
                 showToast(`🧹 Log limpo: ${clearedCount} entradas removidas`, 'success', 3000);
                 console.log(`🧹 Log de exclusões limpo: ${clearedCount} entradas removidas`);
             }
+        }
+
+        // === SISTEMA DE CONSOLIDAÇÃO DE NÓS EXCLUSIVOS ===
+        
+        // Função para consolidar nós exclusivos
+        function consolidateExclusiveNodes(nodeId, nodeLabel) {
+            if (!cy) return;
+            
+            removeNodeContextMenu();
+            
+            const centralNode = cy.getElementById(nodeId);
+            if (!centralNode.length) {
+                showToast('❌ Entidade não encontrada!', 'error');
+                return;
+            }
+            
+            // Analisar nós conectados
+            const connectedEdges = centralNode.connectedEdges();
+            const connectedNodes = connectedEdges.connectedNodes().difference(centralNode);
+            
+            // Identificar nós exclusivos (que só se conectam com o nó central)
+            const exclusiveNodes = [];
+            const sharedNodes = [];
+            
+            connectedNodes.forEach(node => {
+                const nodeConnections = node.connectedEdges();
+                const nodeNeighbors = nodeConnections.connectedNodes().difference(node);
+                
+                // Se só tem conexão com o nó central, é exclusivo
+                if (nodeNeighbors.length === 1 && nodeNeighbors.contains(centralNode)) {
+                    exclusiveNodes.push({
+                        node: node,
+                        data: node.data(),
+                        value: node.data('numericValue') || 0,
+                        edges: nodeConnections.filter(edge => 
+                            edge.source().id() === nodeId || edge.target().id() === nodeId
+                        )
+                    });
+                } else {
+                    sharedNodes.push({
+                        node: node,
+                        data: node.data(),
+                        connections: nodeNeighbors.length
+                    });
+                }
+            });
+            
+            if (exclusiveNodes.length === 0) {
+                showToast(`⚠️ Nenhum nó exclusivo encontrado para "${nodeLabel}"`, 'warning', 4000);
+                return;
+            }
+            
+            // Mostrar preview da consolidação
+            showConsolidationPreview(centralNode, exclusiveNodes, sharedNodes);
+        }
+
+        // Função para mostrar preview da consolidação
+        function showConsolidationPreview(centralNode, exclusiveNodes, sharedNodes) {
+            const centralData = centralNode.data();
+            const currentValue = centralData.numericValue || 0;
+            const exclusiveValue = exclusiveNodes.reduce((sum, item) => sum + item.value, 0);
+            const newValue = currentValue + exclusiveValue;
+            
+            // Determinar nova cor baseada no novo valor
+            const newColorData = getNodeTypeByValue(newValue);
+            
+            // Criar modal de preview
+            const modal = document.createElement('div');
+            modal.id = 'consolidationPreviewModal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 20000;
+                animation: modalFadeIn 0.3s ease-out;
+            `;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, #1e293b, #334155);
+                    border: 2px solid #f59e0b;
+                    border-radius: 16px;
+                    padding: 30px;
+                    max-width: 600px;
+                    width: 90%;
+                    max-height: 80vh;
+                    color: white;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+                    animation: modalSlideIn 0.3s ease-out;
+                    overflow-y: auto;
+                ">
+                    <div style="text-align: center; margin-bottom: 25px;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">🔄</div>
+                        <h3 style="color: #f59e0b; margin: 0;">Consolidar Nós Exclusivos</h3>
+                        <p style="color: #94a3b8; margin: 10px 0;">
+                            Absorver nós que só se conectam a esta entidade
+                        </p>
+                    </div>
+                    
+                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #f59e0b; margin: 0 0 15px 0;">📊 Entidade Central: ${centralData.label}</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div style="text-align: center; padding: 10px; background: rgba(59, 130, 246, 0.2); border-radius: 8px;">
+                                <div style="font-size: 1.2rem; color: #60a5fa; font-weight: bold;">
+                                    ${currentValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </div>
+                                <div style="font-size: 0.9rem; color: #93c5fd;">Valor Atual</div>
+                            </div>
+                            <div style="text-align: center; padding: 10px; background: rgba(34, 197, 94, 0.2); border-radius: 8px;">
+                                <div style="font-size: 1.2rem; color: #4ade80; font-weight: bold;">
+                                    ${newValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                </div>
+                                <div style="font-size: 0.9rem; color: #86efac;">Novo Valor</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; background: rgba(168, 85, 247, 0.2); border-radius: 8px;">
+                            <div style="font-size: 1rem; color: #c084fc;">
+                                Mudança de Cor: ${centralData.customColor} → ${newColorData.color}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #ef4444; margin: 0 0 15px 0;">🗑️ Nós Exclusivos a Serem Absorvidos:</h4>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                            ${exclusiveNodes.map(item => `
+                                <div style="background: rgba(239, 68, 68, 0.1); border-radius: 6px; padding: 10px; margin: 5px 0; display: flex; justify-content: space-between;">
+                                    <span style="color: #fecaca;">${item.data.label}</span>
+                                    <span style="color: #ef4444; font-weight: bold;">
+                                        ${item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div style="text-align: center; margin-top: 15px; font-size: 0.9rem; color: #fecaca;">
+                            <strong>${exclusiveNodes.length}</strong> nós serão absorvidos
+                        </div>
+                    </div>
+                    
+                    ${sharedNodes.length > 0 ? `
+                        <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                            <h4 style="color: #22c55e; margin: 0 0 15px 0;">✅ Nós Compartilhados (Mantidos):</h4>
+                            <div style="max-height: 150px; overflow-y: auto;">
+                                ${sharedNodes.map(item => `
+                                    <div style="background: rgba(34, 197, 94, 0.1); border-radius: 6px; padding: 8px; margin: 5px 0; display: flex; justify-content: space-between;">
+                                        <span style="color: #bbf7d0;">${item.data.label}</span>
+                                        <span style="color: #22c55e; font-size: 0.8rem;">
+                                            ${item.connections} conexões
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: #bbf7d0;">
+                                <strong>${sharedNodes.length}</strong> nós mantidos (têm outras conexões)
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="display: flex; gap: 15px; justify-content: center; margin-top: 25px;">
+                        <button onclick="cancelConsolidation()" style="
+                            background: #6b7280;
+                            color: white;
+                            border: none;
+                            padding: 12px 25px;
+                            border-radius: 8px;
+                            font-size: 1rem;
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                        ">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button onclick="executeConsolidation('${centralNode.id()}')" style="
+                            background: #f59e0b;
+                            color: white;
+                            border: 2px solid #fbbf24;
+                            padding: 12px 25px;
+                            border-radius: 8px;
+                            font-size: 1rem;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                        ">
+                            <i class="fas fa-compress-arrows-alt"></i> CONSOLIDAR
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: center; font-size: 0.8rem; color: #94a3b8;">
+                        💡 Esta ação pode ser desfeita com <kbd>Ctrl+Z</kbd>
+                    </div>
+                </div>
+            `;
+            
+            // Destacar nós que serão afetados
+            cy.elements().removeClass('highlighted dimmed consolidation-target');
+            
+            // Destacar nó central
+            centralNode.addClass('highlighted');
+            
+            // Destacar nós exclusivos (serão removidos)
+            exclusiveNodes.forEach(item => {
+                item.node.addClass('consolidation-target');
+                item.edges.forEach(edge => edge.addClass('consolidation-target'));
+            });
+            
+            // Diminuir opacidade dos outros
+            cy.elements().difference(
+                centralNode.union(
+                    cy.collection(exclusiveNodes.map(item => item.node))
+                        .union(cy.collection(exclusiveNodes.flatMap(item => item.edges)))
+                )
+            ).addClass('dimmed');
+            
+            document.body.appendChild(modal);
+            
+            // Salvar dados para execução
+            window.consolidationData = {
+                centralNode: centralNode,
+                exclusiveNodes: exclusiveNodes,
+                sharedNodes: sharedNodes,
+                newValue: newValue,
+                newColorData: newColorData
+            };
+        }
+
+        // Função para cancelar consolidação
+        function cancelConsolidation() {
+            const modal = document.getElementById('consolidationPreviewModal');
+            if (modal) {
+                modal.style.animation = 'modalFadeIn 0.3s ease-out reverse';
+                setTimeout(() => modal.remove(), 300);
+            }
+            
+            // Remover destaques
+            if (cy) {
+                cy.elements().removeClass('highlighted dimmed consolidation-target');
+            }
+            
+            // Limpar dados temporários
+            delete window.consolidationData;
+            
+            showToast('❌ Consolidação cancelada', 'info', 2000);
+        }
+
+        // Função para executar consolidação
+        function executeConsolidation(centralNodeId) {
+            if (!cy || !window.consolidationData) return;
+            
+            const data = window.consolidationData;
+            const centralNode = data.centralNode;
+            const exclusiveNodes = data.exclusiveNodes;
+            const newValue = data.newValue;
+            const newColorData = data.newColorData;
+            
+            // Fechar modal
+            cancelConsolidation();
+            
+            // Criar backup antes da consolidação
+            const backup = createGraphBackup(`Consolidação de "${centralNode.data('label')}"`);
+            
+            // Estatísticas antes da consolidação
+            const beforeStats = {
+                totalNodes: cy.nodes().length,
+                totalEdges: cy.edges().length,
+                centralValue: centralNode.data('numericValue') || 0,
+                exclusiveNodesCount: exclusiveNodes.length,
+                exclusiveValue: exclusiveNodes.reduce((sum, item) => sum + item.value, 0)
+            };
+            
+            // Atualizar dados do nó central
+            centralNode.data({
+                ...centralNode.data(),
+                numericValue: newValue,
+                totalValue: newValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                customColor: newColorData.color,
+                customSize: newColorData.size,
+                customShadow: newColorData.shadow,
+                consolidated: true,
+                consolidationCount: (centralNode.data('consolidationCount') || 0) + exclusiveNodes.length
+            });
+            
+            // Aplicar novos estilos ao nó central
+            centralNode.style({
+                'background-color': newColorData.color,
+                'width': newColorData.size,
+                'height': newColorData.size,
+                'box-shadow': newColorData.shadow,
+                'border-color': '#fbbf24', // Borda dourada para indicar consolidação
+                'border-width': 6
+            });
+            
+            // Remover nós exclusivos e suas conexões
+            const elementsToRemove = cy.collection();
+            exclusiveNodes.forEach(item => {
+                elementsToRemove.union(item.node);
+                elementsToRemove.union(item.edges);
+            });
+            
+            cy.remove(elementsToRemove);
+            
+            // Registrar log da consolidação
+            const consolidationLog = {
+                timestamp: new Date().toISOString(),
+                action: 'consolidation',
+                centralNodeId: centralNodeId,
+                centralNodeLabel: centralNode.data('label'),
+                exclusiveNodesCount: exclusiveNodes.length,
+                exclusiveNodesLabels: exclusiveNodes.map(item => item.data.label),
+                valueChange: {
+                    before: beforeStats.centralValue,
+                    after: newValue,
+                    absorbed: beforeStats.exclusiveValue
+                },
+                colorChange: {
+                    before: centralNode.data('customColor'),
+                    after: newColorData.color
+                },
+                beforeStats: beforeStats,
+                afterStats: {
+                    totalNodes: cy.nodes().length,
+                    totalEdges: cy.edges().length
+                },
+                backupId: backup ? backup.timestamp : null
+            };
+            
+            excludedEntitiesLog.push(consolidationLog);
+            
+            // Remover destaques
+            cy.elements().removeClass('highlighted dimmed consolidation-target');
+            
+            // Aplicar layout suave após consolidação
+            cy.layout({
+                name: 'cose',
+                animate: true,
+                animationDuration: 1000,
+                fit: true,
+                padding: 30,
+                nodeRepulsion: 4000,
+                idealEdgeLength: 80
+            }).run();
+            
+            // Mostrar resultado
+            showToast(`
+                <strong>🔄 Consolidação Executada com Sucesso</strong><br>
+                Entidade: "${centralNode.data('label')}"<br>
+                🗑️ ${exclusiveNodes.length} nós exclusivos absorvidos<br>
+                💰 Valor: ${beforeStats.centralValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} → ${newValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}<br>
+                🎨 Nova cor aplicada baseada no valor<br>
+                <small>💡 Use Ctrl+Z para desfazer</small>
+            `, 'success', 7000);
+            
+            console.log('🔄 Consolidação executada:', consolidationLog);
         }
 
         // FORÇA BOTÕES AZUIS - Anti-cache garantido
