@@ -10,6 +10,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
+    <!-- Configurações de IA -->
+    <script>
+        // Configuração da IA
+        const AI_CONFIG = {
+            gemini: {
+                apiUrl: 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
+                model: 'gemini-pro'
+            },
+            openai: {
+                apiUrl: 'https://api.openai.com/v1/chat/completions',
+                model: 'gpt-3.5-turbo' // ou 'gpt-4' para análises mais avançadas
+            }
+        };
+    </script>
+    
     <style>
         /* Garantir que os ícones FontAwesome sejam carregados */
         @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
