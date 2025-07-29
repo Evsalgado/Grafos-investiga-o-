@@ -1,4 +1,4 @@
-# 🚀 InvestigIA Pro - Sistema de Análise de Grafos para Investigação
+# 🚀 InvestigIA -FIRPA - Sistema de Análise de Grafos para Investigação
 
 [![MercadoLibre](https://img.shields.io/badge/MercadoLibre-Corporate-blue)](https://github.com/evsalgado_meli)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-green)](https://evsalgado_meli.github.io/InvestigIA-Pro/)
@@ -6,7 +6,7 @@
 
 ## 📋 **Visão Geral**
 
-O **InvestigIA Pro** é uma ferramenta avançada de análise de grafos desenvolvida para investigações corporativas e análise de vínculos. Combina visualização interativa, inteligência artificial e funcionalidades robustas para análise de dados relacionais.
+O **InvestigIA -FIRPA** é uma ferramenta avançada de análise de grafos desenvolvida para investigações corporativas e análise de vínculos. Combina visualização interativa, inteligência artificial e funcionalidades robustas para análise de dados relacionais.
 
 ### 🎯 **Principais Funcionalidades**
 

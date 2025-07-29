@@ -1,4 +1,4 @@
-# 🚀 InvestigIA Pro - Versão Atualizada
+# 🚀 InvestigIA -FIRPA - Versão Atualizada
 
 ## ⚡ **VERSÃO SEM FILTROS + PDF EXPORT**
 

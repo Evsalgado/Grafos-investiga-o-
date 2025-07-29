@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo 🚀 CONFIGURADOR InvestigIA Pro - MELI
+echo 🚀 CONFIGURADOR InvestigIA -FIRPA - MELI
 echo ========================================
 echo.
 

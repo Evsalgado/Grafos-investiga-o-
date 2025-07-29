@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste de Bibliotecas - InvestigIA Pro</title>
+    <title>Teste de Bibliotecas - InvestigIA -FIRPA</title>
     
     <!-- Mesmas bibliotecas da aplicação principal -->
     <script src="https://unpkg.com/cytoscape@3.24.0/dist/cytoscape.min.js"></script>
@@ -90,7 +90,7 @@
 </head>
 <body>
     <div class="status-container">
-        <h1>🔍 Teste de Bibliotecas - InvestigIA Pro</h1>
+        <h1>🔍 Teste de Bibliotecas - InvestigIA -FIRPA</h1>
         <p>Verificando se todas as bibliotecas estão carregando corretamente...</p>
         
         <div id="library-status"></div>
@@ -200,7 +200,7 @@
                     throw new Error('Biblioteca jsPDF não encontrada');
                 }
                 const doc = new jsPDFLib.jsPDF();
-                doc.text('Teste InvestigIA Pro', 10, 10);
+                doc.text('Teste InvestigIA -FIRPA', 10, 10);
                 showResults('✅ Teste jsPDF', 'Sucesso! PDF criado com texto de teste.');
             } catch (error) {
                 showResults('❌ Teste jsPDF', `Erro: ${error.message}`);
