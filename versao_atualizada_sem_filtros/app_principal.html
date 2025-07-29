@@ -13,16 +13,16 @@
     <!-- Configurações de IA -->
     <script>
         // Configuração da IA
-        const AI_CONFIG = {
-            gemini: {
-                apiUrl: 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
-                model: 'gemini-pro'
-            },
-            openai: {
-                apiUrl: 'https://api.openai.com/v1/chat/completions',
-                model: 'gpt-3.5-turbo' // ou 'gpt-4' para análises mais avançadas
-            }
-        };
+                    const AI_CONFIG = {
+                gemini: {
+                    apiUrl: 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent',
+                    model: 'gemini-1.5-flash'
+                },
+                openai: {
+                    apiUrl: 'https://api.openai.com/v1/chat/completions',
+                    model: 'gpt-3.5-turbo' // ou 'gpt-4' para análises mais avançadas
+                }
+            };
     </script>
     
     <style>
@@ -3681,7 +3681,7 @@
             };
         }
 
-        // Análise com Gemini - VERSÃO COM DEBUG MELHORADO
+        // Análise com Gemini - VERSÃO COM MÚLTIPLOS MODELOS E DEBUG
         async function analyzeWithGemini(data, apiKey) {
             console.log('🔄 Iniciando análise com Gemini...');
             console.log('📊 Dados para análise:', data);
@@ -3713,48 +3713,75 @@ Responda em português, formato estruturado com tópicos claros.
                 }
             };
             
-            console.log('📤 Enviando requisição para Gemini...');
+            // Tentar múltiplos modelos Gemini
+            const modelsToTry = [
+                'gemini-1.5-flash',
+                'gemini-1.5-pro', 
+                'gemini-pro'
+            ];
             
-            try {
-                const response = await fetch(`${AI_CONFIG.gemini.apiUrl}?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-                
-                console.log('📥 Resposta recebida, status:', response.status);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('❌ Erro HTTP:', response.status, errorText);
-                    throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+            for (const model of modelsToTry) {
+                try {
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+                    console.log(`📤 Tentando modelo ${model}...`);
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+                    
+                    console.log(`📥 Resposta para ${model}, status:`, response.status);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.warn(`⚠️ Modelo ${model} falhou (${response.status}):`, errorText);
+                        
+                        // Se for erro 404, tentar próximo modelo
+                        if (response.status === 404) {
+                            continue;
+                        }
+                        
+                        throw new Error(`Erro HTTP ${response.status}: ${errorText}`);
+                    }
+                    
+                    const result = await response.json();
+                    console.log(`📋 Resultado de ${model}:`, result);
+                    
+                    // Verificar se há erro na resposta
+                    if (result.error) {
+                        console.warn(`⚠️ Erro da API ${model}:`, result.error);
+                        if (result.error.code === 404) {
+                            continue;
+                        }
+                        throw new Error(`Erro da API: ${result.error.message || 'Erro desconhecido'}`);
+                    }
+                    
+                    // Verificar estrutura da resposta
+                    if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0]) {
+                        const aiResponse = result.candidates[0].content.parts[0].text;
+                        console.log(`✅ Análise do Gemini (${model}) concluída com sucesso`);
+                        return aiResponse;
+                    }
+                    
+                    console.warn(`⚠️ Estrutura de resposta inválida para ${model}:`, result);
+                    continue;
+                    
+                } catch (error) {
+                    console.warn(`⚠️ Erro ao tentar ${model}:`, error.message);
+                    
+                    // Se for o último modelo, re-throw o erro
+                    if (model === modelsToTry[modelsToTry.length - 1]) {
+                        throw error;
+                    }
+                    
+                    continue;
                 }
-                
-                const result = await response.json();
-                console.log('📋 Resultado da API:', result);
-                
-                // Verificar se há erro na resposta
-                if (result.error) {
-                    console.error('❌ Erro da API Gemini:', result.error);
-                    throw new Error(`Erro da API: ${result.error.message || 'Erro desconhecido'}`);
-                }
-                
-                // Verificar estrutura da resposta
-                if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0]) {
-                    const aiResponse = result.candidates[0].content.parts[0].text;
-                    console.log('✅ Análise do Gemini concluída com sucesso');
-                    return aiResponse;
-                }
-                
-                console.error('❌ Estrutura de resposta inválida:', result);
-                throw new Error('Estrutura de resposta inválida da API Gemini');
-                
-            } catch (error) {
-                console.error('❌ Erro na requisição para Gemini:', error);
-                throw error;
             }
+            
+            throw new Error('Nenhum modelo Gemini disponível funcionou');
         }
 
         // Análise com OpenAI
@@ -3831,7 +3858,7 @@ Responda em português, formato estruturado com tópicos claros.
             document.body.appendChild(dialog);
         }
 
-        // Função para testar API key
+        // Função para testar API key - VERSÃO MELHORADA
         async function testAIKey() {
             const provider = document.querySelector('input[name="aiProvider"]:checked').value;
             const apiKey = document.getElementById('aiApiKeyInput').value.trim();
@@ -3841,15 +3868,14 @@ Responda em português, formato estruturado com tópicos claros.
                 return;
             }
             
-            // Criar um teste simples
+            // Criar um teste simples e leve
             const testData = {
-                total_transacoes: 3,
+                total_transacoes: 2,
                 amostra_transacoes: [
                     {origem: "João", destino: "Maria", valor: 1000},
-                    {origem: "Maria", destino: "Pedro", valor: 500},
-                    {origem: "Pedro", destino: "João", valor: 250}
+                    {origem: "Maria", destino: "Pedro", valor: 500}
                 ],
-                valor_total: 1750,
+                valor_total: 1500,
                 entidades_unicas: 3
             };
             
@@ -3858,9 +3884,55 @@ Responda em português, formato estruturado com tópicos claros.
             testButton.textContent = '🔄 Testando...';
             
             try {
+                console.log('🧪 Iniciando teste da API...');
                 let result;
+                
                 if (provider === 'gemini') {
-                    result = await analyzeWithGemini(testData, apiKey);
+                    // Teste mais simples para Gemini
+                    const simplePrompt = "Analise rapidamente estes dados de teste e responda em português que a API está funcionando: " + JSON.stringify(testData);
+                    
+                    const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+                    let lastError = null;
+                    
+                    for (const model of modelsToTry) {
+                        try {
+                            console.log(`🔄 Testando modelo ${model}...`);
+                            const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+                            
+                            const response = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    contents: [{ parts: [{ text: simplePrompt }] }],
+                                    generationConfig: { temperature: 0.3, maxOutputTokens: 100 }
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                const result = await response.json();
+                                if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
+                                    console.log(`✅ Sucesso com modelo ${model}`);
+                                    alert(`✅ API key válida! Modelo funcionando: ${model}`);
+                                    return;
+                                }
+                            } else if (response.status === 404) {
+                                console.log(`⚠️ Modelo ${model} não encontrado, tentando próximo...`);
+                                continue;
+                            } else {
+                                const errorText = await response.text();
+                                lastError = `${model}: HTTP ${response.status}`;
+                                console.log(`❌ Erro ${model}:`, errorText);
+                                continue;
+                            }
+                        } catch (error) {
+                            lastError = `${model}: ${error.message}`;
+                            console.log(`❌ Erro ao testar ${model}:`, error);
+                            continue;
+                        }
+                    }
+                    
+                    throw new Error(`Nenhum modelo Gemini funcionou. Último erro: ${lastError}`);
+                    
                 } else if (provider === 'openai') {
                     result = await analyzeWithOpenAI(testData, apiKey);
                 }
@@ -3872,15 +3944,19 @@ Responda em português, formato estruturado com tópicos claros.
                 }
                 
             } catch (error) {
-                console.error('Erro no teste:', error);
+                console.error('❌ Erro no teste completo:', error);
                 
                 let errorMsg = '❌ Erro no teste da API: ';
                 if (error.message.includes('HTTP 400')) {
                     errorMsg += 'API key inválida ou mal formatada';
                 } else if (error.message.includes('HTTP 403')) {
                     errorMsg += 'API key sem permissão';
+                } else if (error.message.includes('HTTP 404')) {
+                    errorMsg += 'Modelos não encontrados - sua API key pode não ter acesso aos modelos Gemini';
                 } else if (error.message.includes('HTTP 429')) {
                     errorMsg += 'Muitas requisições - tente novamente em alguns minutos';
+                } else if (error.message.includes('Nenhum modelo')) {
+                    errorMsg += 'Sua API key não tem acesso aos modelos Gemini atuais. Tente regenerar a chave.';
                 } else {
                     errorMsg += error.message;
                 }
